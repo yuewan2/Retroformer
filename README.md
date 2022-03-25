@@ -20,27 +20,29 @@ The `rdchiral` package is taken from [here](https://github.com/connorcoley/rdchi
 The overview of the full directory looks like this:
 ```
 Retroformer/
-├── rdchiral/
-├── models/
-├── utils/
-└── data/
-    ├── uspto50k/
-    │   ├── train.csv
-    │   ├── val.csv
-    │   └── test.csv
-    └── .../
-└── intermediate/
-    └── vocab_share.pk
-└── checkpoint_untyped/
-    ├── model_best.pt
-└── checkpoint_typed/
-    └── model_best.pt   
-├── result/
-├── dataset.py
+└── retroformer/
+    ├── rdchiral/
+    ├── models/
+    ├── utils/
+    └── data/
+        ├── uspto50k/
+        │   ├── train.csv
+        │   ├── val.csv
+        │   └── test.csv
+        └── .../
+    └── intermediate/
+        └── vocab_share.pk
+    └── checkpoint_untyped/
+        ├── model_best.pt
+    └── checkpoint_typed/
+        └── model_best.pt   
+    ├── result/
+    ├── dataset.py
+    ├── train.py
+    └── translate.py
+├── setup.py
 ├── start.sh
-├── train.py
-├── translate.sh
-└── translate.py     
+└── translate.sh
 ```
 
 ## Data:
