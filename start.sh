@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python train.py \
+python retroformer/train.py \
   --num_layers 8 \
   --heads 8 \
   --max_step 100000 \

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python translate.py \
+python retroformer/translate.py \
   --batch_size_val 8 \
   --shared_vocab True \
   --shared_encoder False \
