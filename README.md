@@ -24,22 +24,22 @@ Retroformer/
     ├── rdchiral/
     ├── models/
     ├── utils/
-    └── data/
-        ├── uspto50k/
-        │   ├── train.csv
-        │   ├── val.csv
-        │   └── test.csv
-        └── .../
-    └── intermediate/
-        └── vocab_share.pk
-    └── checkpoint_untyped/
-        ├── model_best.pt
-    └── checkpoint_typed/
-        └── model_best.pt   
-    ├── result/
     ├── dataset.py
     ├── train.py
     └── translate.py
+└── data/
+    ├── uspto50k/
+    │   ├── train.csv
+    │   ├── val.csv
+    │   └── test.csv
+    └── .../
+└── intermediate/
+    └── vocab_share.pk
+└── checkpoint_untyped/
+    └── model_best.pt
+└── checkpoint_typed/
+    └── model_best.pt   
+├── result/
 ├── setup.py
 ├── start.sh
 └── translate.sh
