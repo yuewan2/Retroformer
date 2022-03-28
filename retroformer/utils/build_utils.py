@@ -28,8 +28,9 @@ def build_model(args, vocab_itos_src, vocab_itos_tgt):
     tgt_pad_idx = np.argwhere(np.array(vocab_itos_tgt) == '<pad>')[0][0]
 
     model = RetroModel(
-        num_layers=args.num_layers, d_model=args.d_model,
-        heads=args.heads, d_ff=args.d_ff, dropout=args.dropout,
+        encoder_num_layers=args.encoder_num_layers,
+        decoder_num_layers=args.decoder_num_layers,
+        d_model=args.d_model, heads=args.heads, d_ff=args.d_ff, dropout=args.dropout,
         vocab_size_src=len(vocab_itos_src), vocab_size_tgt=len(vocab_itos_tgt),
         shared_vocab=args.shared_vocab == 'True', shared_encoder=args.shared_encoder == 'True',
         src_pad_idx=src_pad_idx, tgt_pad_idx=tgt_pad_idx)

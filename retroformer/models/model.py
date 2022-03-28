@@ -15,11 +15,12 @@ from retroformer.models.module import MultiHeadedAttention
 
 
 class RetroModel(nn.Module):
-    def __init__(self, num_layers, d_model, heads, d_ff, dropout,
+    def __init__(self, encoder_num_layers, decoder_num_layers, d_model, heads, d_ff, dropout,
                  vocab_size_src, vocab_size_tgt, shared_vocab, num_bonds=5, shared_encoder=False, src_pad_idx=1,
                  tgt_pad_idx=1):
         super(RetroModel, self).__init__()
-        self.num_layers = num_layers
+        self.encoder_num_layers = encoder_num_layers
+        self.decoder_num_layers = decoder_num_layers
         self.d_model = d_model
         self.heads = heads
         self.d_ff = d_ff
@@ -38,22 +39,23 @@ class RetroModel(nn.Module):
 
         multihead_attn_modules_en = nn.ModuleList(
             [MultiHeadedAttention(heads, d_model, dropout=dropout)
-             for _ in range(num_layers)])
+             for _ in range(encoder_num_layers)])
         if shared_encoder:
+            assert encoder_num_layers == decoder_num_layers
             multihead_attn_modules_de = multihead_attn_modules_en
         else:
             multihead_attn_modules_de = nn.ModuleList(
                 [MultiHeadedAttention(heads, d_model, dropout=dropout)
-                 for _ in range(num_layers)])
+                 for _ in range(decoder_num_layers)])
 
-        self.encoder = TransformerEncoder(num_layers=num_layers,
+        self.encoder = TransformerEncoder(num_layers=encoder_num_layers,
                                           d_model=d_model, heads=heads,
                                           d_ff=d_ff, dropout=dropout,
                                           embeddings=self.embedding_src,
                                           embeddings_bond=self.embedding_bond,
                                           attn_modules=multihead_attn_modules_en)
 
-        self.decoder = TransformerDecoder(num_layers=num_layers,
+        self.decoder = TransformerDecoder(num_layers=decoder_num_layers,
                                           d_model=d_model, heads=heads,
                                           d_ff=d_ff, dropout=dropout,
                                           embeddings=self.embedding_tgt,
