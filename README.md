@@ -56,7 +56,8 @@ One can specify different model and training configurations in `start.sh`. Below
 
 ```
 python train.py \
-  --num_layers 8 \
+  --encoder_num_layers 8 \
+  --decoder_num_layers 8 \
   --heads 8 \
   --max_step 100000 \
   --batch_size_token 4096 \

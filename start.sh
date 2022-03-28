@@ -1,7 +1,8 @@
 #!/bin/bash
 
 python retroformer/train.py \
-  --num_layers 8 \
+  --encoder_num_layers 8 \
+  --decoder_num_layers 8 \
   --heads 8 \
   --max_step 100000 \
   --batch_size_trn 4 \
