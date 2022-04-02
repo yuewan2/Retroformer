@@ -3,8 +3,8 @@ import pickle
 import numpy as np
 from rdkit import Chem
 
-from retroformer.utils.smiles_utils import smi_tokenizer, clear_map_number, SmilesGraph
-from retroformer.utils.smiles_utils import canonical_smiles
+from retroformer.utils.smiles_utils import smi_tokenizer, clear_map_number, SmilesGraph, add_mapping
+from retroformer.utils.smiles_utils import canonical_smiles, get_reaction_centers_from_template, select_diverse_candidate
 from retroformer.utils.translate_utils import batch_infer_reaction_center
 from retroformer.models.model import RetroModel
 from retroformer.rdchiral.template_extractor import get_fragments_for_changed_atoms
@@ -15,12 +15,15 @@ def gaussian(x, mean, amplitude, standard_deviation):
 
 
 class RetroFormer():
-    def __init__(self, checkpoint_path=None, vocab_path=None, device='cpu'):
+    def __init__(self, checkpoint_path=None, vocab_path=None, rc_path=None, device='cpu'):
         self.device = device
         if vocab_path is not None:
             self.load_vocab(vocab_path)
         if checkpoint_path is not None:
             self.load_model(checkpoint_path)
+        if rc_path is not None:
+            with open(rc_path, 'rb') as f:
+                self.rc_candidates = pickle.load(f)
 
         self.factor_func = lambda x: (1 + gaussian(x, 5.55391565, 0.27170542, 1.20071279))
 
@@ -43,6 +46,18 @@ class RetroFormer():
             self.vocab_src_itos, self.vocab_tgt_itos = pickle.load(f)
         self.vocab_src_stoi = {v: i for i, v in enumerate(self.vocab_src_itos)}
         self.vocab_tgt_stoi = {v: i for i, v in enumerate(self.vocab_tgt_itos)}
+
+    def reconstruct_smi(self, tokens, src=True, raw=False):
+        if src:
+            if raw:
+                return [self.vocab_src_itos[t] for t in tokens]
+            else:
+                return [self.vocab_src_itos[t] for t in tokens if t != 1]
+        else:
+            if raw:
+                return [self.vocab_tgt_itos[t] for t in tokens]
+            else:
+                return [self.vocab_tgt_itos[t] for t in tokens if t not in [1, 2, 3]]
 
     def parse_inputs(self, mol_smiles):
         cano_prod = clear_map_number(mol_smiles)
@@ -111,7 +126,7 @@ class RetroFormer():
 
         return rc_smarts
 
-    def compute(self, product_smiles, verbose=False, topk=5):
+    def compute(self, product_smiles, verbose=False, topk=5, use_template=False):
         cano_prod, src_token, smiles_graph = self.parse_inputs(product_smiles)
         # Prepare Inputs:
         src = torch.LongTensor(src_token).unsqueeze(1).to(self.device)
@@ -126,9 +141,33 @@ class RetroFormer():
             atom_rc_scores = self.model.atom_rc_identifier[1](self.model.atom_rc_identifier[0](prior_encoder_out) / 10)
             bond_rc_scores = self.model.bond_rc_identifier[1](self.model.bond_rc_identifier[0](edge_feature) / 10)
 
-        predicts = self.infer_reaction_center(atom_rc_scores, bond_rc_scores, graph_packs,
-                                              beta=0.5, percent_aa=0.4, percent_ab=0.55, k=topk,
-                                              num_removal=5, max_count=25)
+        if use_template:
+            pair_indices = torch.where(bond.sum(-1) > 0)
+            batch_bond_scores = torch.zeros(src.shape[1], src.shape[0], src.shape[0]).to(src.device)
+            batch_bond_scores[pair_indices] = bond_rc_scores.view(-1)
+            batch_atom_scores = atom_rc_scores.squeeze(2).transpose(0, 1)
+
+            src_tokens = self.reconstruct_smi(src[:, 0], src=True)
+            rt_token, src_tokens = src_tokens[0], src_tokens[1:]
+            blank_src_smiles = ''.join(src_tokens)
+            for i in range(len(src_tokens)):
+                src_tokens[i] = add_mapping(src_tokens[i], map_num=i)
+            src_smiles = ''.join(src_tokens)
+            atom_scores = (batch_atom_scores[0][1:]).cpu().numpy()
+            bond_scores = (batch_bond_scores[0][1:, 1:]).cpu().numpy()
+            adjacency_matrix = smiles_graph.adjacency_matrix
+            full_adjacency_matrix = smiles_graph.full_adjacency_tensor.sum(-1)
+            graph_pack = (atom_scores, bond_scores, adjacency_matrix, full_adjacency_matrix)
+
+            cc_trace_with_score_template = get_reaction_centers_from_template(src_smiles, blank_src_smiles,
+                                                                              graph_pack, self.rc_candidates)
+
+            if len(cc_trace_with_score_template):
+                predicts = [select_diverse_candidate(cc_trace_with_score_template, diverse_k=topk)]
+        else:
+            predicts = self.infer_reaction_center(atom_rc_scores, bond_rc_scores, graph_packs,
+                                                  beta=0.5, percent_aa=0.4, percent_ab=0.55, k=topk,
+                                                  num_removal=5, max_count=25)
 
         decoded_src_token = [self.vocab_src_itos[i] for i in src_token[1:]]
 

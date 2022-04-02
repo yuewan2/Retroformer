@@ -7,6 +7,7 @@ from retroformer.rdchiral.template_extractor import extract_from_reaction, get_c
 import pickle
 import torch
 import numpy as np
+from tqdm import tqdm
 
 BONDTYPES = ['NONE', 'AROMATIC', 'DOUBLE', 'SINGLE', 'TRIPLE']
 BONDTOI = {bond: i for i, bond in enumerate(BONDTYPES)}
@@ -158,26 +159,28 @@ def select_diverse_candidate(cc_trace_with_score, diverse_k=10):
     return selected_cc_trace_with_score
 
 
-def get_reaction_centers_from_template(src_smiles, graph_pack, reaction_centers):
+def get_reaction_centers_from_template(src_smiles, blank_src_smiles, graph_pack, reaction_centers):
     """Retrieve all the potential reaction center from a pool of existing molecule fragment"""
+    mol_blank = Chem.MolFromSmiles(blank_src_smiles)
     mol = Chem.MolFromSmiles(src_smiles)
     if mol is None:
         return []
-    potential_rcs = set()
-    for rc in reaction_centers:
+    potential_rcs = {}
+    for rc in (reaction_centers):
         if rc[0] == '(' and rc[-1] == ')':
             rc = rc[1:-1]
         patt = Chem.MolFromSmarts(rc)
-        if patt is not None and mol.HasSubstructMatch(patt):
-            for match in mol.GetSubstructMatches(patt):
+        if patt is not None and mol_blank.HasSubstructMatch(patt):
+            for match in mol_blank.GetSubstructMatches(patt):
                 token_match_indices = []
                 for index in match:
                     atom_smarts = mol.GetAtomWithIdx(index).GetSmarts()
                     token_match_indices.append(int(re.match('.*:([0-9]+)\]', atom_smarts).group(1)))
-                score = get_cc_score(token_match_indices, graph_pack) / get_norm(token_match_indices, graph_pack)
-                potential_rcs.add((tuple(token_match_indices), score))
+                if tuple(sorted(token_match_indices)) not in potential_rcs:
+                    score = get_cc_score(token_match_indices, graph_pack) / get_norm(token_match_indices, graph_pack)
+                    potential_rcs[tuple(sorted(token_match_indices))] = score
 
-    return sorted(list(potential_rcs), key=lambda x: -x[1])
+    return sorted(potential_rcs.items(), key=lambda x: -x[1])
 
 
 def dfs_cc(trace, i, visited, graph_pack, alpha_atom=0.01, alpha_bond=0.01):
@@ -369,6 +372,7 @@ def canonical_smiles(smi):
         return smi
     else:
         canonical_smi = Chem.MolToSmiles(mol)
+        # print('>>', canonical_smi)
         if '.' in canonical_smi:
             canonical_smi_list = canonical_smi.split('.')
             canonical_smi_list = sorted(canonical_smi_list, key=lambda x: (len(x), x))

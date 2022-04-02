@@ -106,8 +106,9 @@ class RetroDataset(Dataset):
         self.env = lmdb.open(os.path.join(self.data_folder, 'cooked_{}.lmdb'.format(self.mode)),
                              max_readers=1, readonly=True,
                              lock=False, readahead=False, meminit=False)
+
         with self.env.begin(write=False) as txn:
-            self.product_keys = pickle.loads(txn.get('keys'.encode()))
+            self.product_keys = list(txn.cursor().iternext(values=False))
 
         self.factor_func = lambda x: (1 + gaussian(x, 5.55391565, 0.27170542, 1.20071279)) # pre-computed
 
@@ -131,9 +132,9 @@ class RetroDataset(Dataset):
         raw_data.reset_index(inplace=True, drop=True)
         reactions = raw_data['reactants>reagents>production'].to_list()
 
-        product_keys = []
         env = lmdb.open(os.path.join(self.data_folder, 'cooked_{}.lmdb'.format(self.mode)),
                         map_size=1099511627776)
+
         with env.begin(write=True) as txn:
             for i in tqdm(range(len(reactions))):
                 rxn = reactions[i]
@@ -144,7 +145,7 @@ class RetroDataset(Dataset):
                     src, src_graph, tgt, context_align, nonreact_mask = result
                     graph_contents = src_graph.adjacency_matrix, src_graph.bond_type_dict, src_graph.bond_attributes
 
-                    p_key = clear_map_number(p)
+                    p_key = '{} {}'.format(i, clear_map_number(p))
                     processed = {
                         'src': src,
                         'graph_contents': graph_contents,
@@ -155,9 +156,14 @@ class RetroDataset(Dataset):
                         'raw_reactants': r,
                         'reaction_class': rt
                     }
-                    txn.put(p_key.encode(), pickle.dumps(processed))
-                    product_keys.append(p_key)
-            txn.put('keys'.encode(), pickle.dumps(product_keys))
+                    try:
+                        txn.put(p_key.encode(), pickle.dumps(processed))
+                    except:
+                        print('Error processing index {} and product {}'.format(i, p_key))
+                        continue
+                else:
+                    print('Warning. Process Failed.')
+
         return
 
     def parse_smi_wrapper(self, task):
@@ -245,10 +251,8 @@ class RetroDataset(Dataset):
     def __getitem__(self, idx):
         p_key = self.product_keys[idx]
         with self.env.begin(write=False) as txn:
-            processed = pickle.loads(txn.get(p_key.encode()))
-
-        # print(canonical_smiles_with_am(processed['raw_product']))
-        # print(canonical_smiles_with_am(processed['raw_reactants']))
+            processed = pickle.loads(txn.get(p_key))
+        p_key = p_key.decode().split(' ')[1]
 
         p = np.random.rand()
         if self.mode == 'train' and p > 0.5 and self.augment:

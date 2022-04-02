@@ -201,6 +201,7 @@ def translate_batch_stepwise(model, batch, eos_idx=3, beam_size=10, max_length=2
         for batch_i in range(src.shape[1]):
             src_tokens = reconstruct_func(src[:, batch_i], src=True)
             rt_token, src_tokens = src_tokens[0], src_tokens[1:]
+            blank_src_smiles = ''.join(src_tokens)
             for i in range(len(src_tokens)):
                 src_tokens[i] = add_mapping(src_tokens[i], map_num=i)
             src_smiles = ''.join(src_tokens)
@@ -211,12 +212,13 @@ def translate_batch_stepwise(model, batch, eos_idx=3, beam_size=10, max_length=2
             full_adjacency_matrix = src_graph[batch_i].full_adjacency_tensor.sum(-1)
             graph_pack = (atom_scores, bond_scores, adjacency_matrix, full_adjacency_matrix)
 
-            cc_trace_with_score_template = get_reaction_centers_from_template(src_smiles, graph_pack,
+            cc_trace_with_score_template = get_reaction_centers_from_template(src_smiles, blank_src_smiles, graph_pack,
                                                                               rt2reaction_center[rt_token])
             if len(cc_trace_with_score_template):
                 predict_rc_template = select_diverse_candidate(cc_trace_with_score_template, diverse_k=k)
             else:
                 predict_rc_template = []
+
             predicts.append(predict_rc_template)
 
     # Remake batched data:
