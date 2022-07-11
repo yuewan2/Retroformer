@@ -1,5 +1,5 @@
 # Retroformer
-This is the directory of the work [Retroformer: Pushing the Limits of Interpretable End-to-end Retrosynthesis Transformer](https://arxiv.org/abs/2201.12475).
+This is the directory of the work [Retroformer: Pushing the Limits of Interpretable End-to-end Retrosynthesis Transformer](https://proceedings.mlr.press/v162/wan22a/wan22a.pdf).
 
 
 
@@ -98,3 +98,21 @@ python translate.py \
   --use_template False
 ```
 
+## Reference:
+
+If you find our work useful, please cite by:
+```
+@InProceedings{pmlr-v162-wan22a,
+  title = {Retroformer: Pushing the Limits of End-to-end Retrosynthesis Transformer},
+  author = {Wan, Yue and Hsieh, Chang-Yu and Liao, Ben and Zhang, Shengyu},
+  booktitle = {Proceedings of the 39th International Conference on Machine Learning},
+  pages = {22475--22490},
+  year = {2022},
+  volume = {162},
+  series = {Proceedings of Machine Learning Research},
+  month = {17--23 Jul},
+  publisher = {PMLR},
+  pdf = {https://proceedings.mlr.press/v162/wan22a/wan22a.pdf},
+  url = {https://proceedings.mlr.press/v162/wan22a.html}
+}
+``
