@@ -76,7 +76,8 @@ def translate(iterator, model, dataset):
             else:
                 percent_ab = 40
             pred_tokens, pred_scores, predicts = \
-                translate_batch_stepwise(model, batch, invalid_token_indices=invalid_token_indices,
+                translate_batch_stepwise(model, batch, beam_size=args.beam_size,
+                                         invalid_token_indices=invalid_token_indices,
                                          T=10, alpha_atom=-1, alpha_bond=-1,
                                          beta=0.5, percent_aa=40, percent_ab=percent_ab, k=3,
                                          use_template=args.use_template == 'True',
@@ -118,7 +119,7 @@ def translate(iterator, model, dataset):
                     remain -= beam_size
 
                 current_i += len(predict)
-                ordering = np.argsort(hypo_scores_i)[::-1][:10]
+                ordering = np.argsort(hypo_scores_i)[::-1][:args.beam_size]
                 ground_truths.append(gt)
                 generations.append(np.array(hypo_i)[ordering])
 
